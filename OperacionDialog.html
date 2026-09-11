@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Google Sans',Arial,sans-serif; font-size:13px; color:#202124;
+         background:#f8f9fa; padding:16px; }
+
+  /* ── Formulario ────────────────────────────────────────── */
+  h2 { font-size:15px; font-weight:600; margin-bottom:14px; color:#1a73e8;
+       border-bottom:2px solid #1a73e8; padding-bottom:6px; }
+  .section { background:#fff; border:1px solid #dadce0; border-radius:8px;
+             padding:14px; margin-bottom:12px; }
+  .section-title { font-size:11px; font-weight:700; text-transform:uppercase;
+                   letter-spacing:.5px; color:#5f6368; margin-bottom:10px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  label { display:block; font-size:11px; color:#5f6368; margin-bottom:3px; font-weight:500; }
+  input, select { width:100%; padding:7px 10px; border:1px solid #dadce0;
+                  border-radius:4px; font-size:13px; outline:none; }
+  input:focus, select:focus { border-color:#1a73e8; box-shadow:0 0 0 2px rgba(26,115,232,.2); }
+  input[readonly] { background:#f5f5f5; color:#5f6368; }
+
+  .divisa-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .divisa-card { border:2px solid #dadce0; border-radius:6px; padding:10px 8px;
+                 cursor:pointer; text-align:center; transition:all .2s; }
+  .divisa-card:hover:not(.blocked) { border-color:#1a73e8; background:#e8f0fe; }
+  .divisa-card.selected { border-color:#1a73e8; background:#e8f0fe; }
+  .divisa-card.blocked  { background:#f5f5f5; cursor:not-allowed; opacity:.5; }
+  .divisa-card .cod { font-weight:700; font-size:13px; }
+  .divisa-card .nom { font-size:10px; color:#5f6368; margin-top:2px; line-height:1.2; }
+  .divisa-card .est { font-size:10px; font-weight:600; margin-top:4px; }
+  .divisa-card.blocked .est  { color:#c62828; }
+  .divisa-card:not(.blocked) .est { color:#2e7d32; }
+
+  .calc-box { background:#f8f9fa; border:1px solid #dadce0; border-radius:6px;
+              padding:12px; margin-top:10px; }
+  .calc-row { display:flex; justify-content:space-between; padding:3px 0;
+              font-size:12px; color:#5f6368; }
+  .calc-row.sep    { border-top:1px dashed #dadce0; margin-top:4px; padding-top:6px; }
+  .calc-row.markup { color:#e65100; }
+  .calc-row.total  { font-weight:700; font-size:15px; color:#202124;
+                     border-top:2px solid #1a73e8; margin-top:6px; padding-top:8px; }
+  .calc-row.total span:last-child { color:#1a73e8; }
+
+  .aml-badge { display:inline-block; padding:3px 10px; border-radius:10px;
+               font-size:11px; font-weight:700; margin-top:8px; }
+  .aml-NORMAL         { background:#e8f5e9; color:#2e7d32; }
+  .aml-ID_REQUERIDO   { background:#fff9c4; color:#f57f17; }
+  .aml-DD_REFORZADA   { background:#ffe0b2; color:#e65100; }
+  .aml-DECLARACION_S1 { background:#ffcdd2; color:#b71c1c; }
+  .aml-SOSPECHOSO     { background:#b71c1c; color:#fff; }
+  .aml-warning { background:#fff3e0; border:1px solid #ff9800; border-radius:6px;
+                 padding:8px 12px; margin-top:6px; font-size:12px; }
+  .aml-warning ul { margin-left:16px; margin-top:4px; }
+  .aml-warning li { margin-bottom:3px; }
+  .aml-critical { background:#ffebee; border-color:#f44336; }
+
+  .btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+  button { padding:8px 18px; border:none; border-radius:4px; font-size:13px;
+           font-weight:600; cursor:pointer; }
+  .btn-primary { background:#1a73e8; color:#fff; }
+  .btn-primary:hover { background:#1557b0; }
+  .btn-primary:disabled { background:#9e9e9e; cursor:not-allowed; }
+  .btn-sec   { background:#fff; color:#1a73e8; border:1px solid #1a73e8; }
+  .btn-print { background:#2e7d32; color:#fff; }
+  .btn-print:hover { background:#1b5e20; }
+
+  .msg { padding:10px; border-radius:6px; margin-top:10px; font-size:12px; line-height:1.5; }
+  .msg-err { background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; }
+  .spinner  { display:none; text-align:center; padding:10px; color:#1a73e8; }
+  .hidden   { display:none !important; }
+
+  /* ── Recibo (dentro del mismo modal) ──────────────────── */
+  #vistaRecibo { display:none; background:#f8f9fa; }
+
+  .recibo {
+    background:#fff; border:1px solid #dadce0; border-radius:8px;
+    padding:10mm 10mm 8mm; font-size:12px;
+  }
+  .hotel-header { text-align:center; padding-bottom:5mm;
+                  border-bottom:2px solid #1a73e8; margin-bottom:4mm; }
+  .hotel-nombre { font-size:15px; font-weight:700; color:#1a73e8; }
+  .hotel-datos  { font-size:10px; color:#5f6368; margin-top:2px; line-height:1.4; }
+  .recibo-titulo { text-align:center; background:#1a73e8; color:#fff;
+                   padding:5px 0; font-size:12px; font-weight:700;
+                   letter-spacing:.8px; border-radius:3px; margin-bottom:5mm; }
+  .bloque       { margin-bottom:4mm; }
+  .bloque-titulo { font-size:9px; font-weight:700; text-transform:uppercase;
+                   letter-spacing:.5px; color:#5f6368;
+                   border-bottom:1px solid #e0e0e0; padding-bottom:2px; margin-bottom:3px; }
+  .rfila { display:flex; justify-content:space-between; padding:2px 0; font-size:11px; }
+  .rfila .rl { color:#5f6368; }
+  .rfila .rv { font-weight:500; text-align:right; }
+
+  .rtabla { width:100%; border-collapse:collapse; font-size:11px; }
+  .rtabla td { padding:3px 4px; }
+  .rtabla .rl { color:#5f6368; }
+  .rtabla .rv { text-align:right; font-weight:500; }
+  .rtabla tr.rmkp td { color:#e65100; }
+  .rtabla tr.rsep td { border-top:1px dashed #bbb; padding-top:5px; }
+  .rtabla tr.rtot td { border-top:2px solid #1a73e8; padding-top:5px; }
+  .rtabla tr.rtot .rl { font-weight:700; font-size:13px; color:#202124; }
+  .rtabla tr.rtot .rv { font-weight:700; font-size:16px; color:#1a73e8; }
+
+  .raml { border:1px solid #ff9800; border-radius:4px; padding:4px 7px;
+          background:#fff8e1; font-size:10px; color:#e65100; margin-bottom:4mm; }
+  .raml strong { display:block; margin-bottom:2px; }
+
+  .firma-area { display:flex; gap:8mm; margin-top:5mm; }
+  .firma-box  { flex:1; }
+  .firma-line { border-bottom:1px solid #bbb; height:12mm; margin-bottom:3px; }
+  .firma-lbl  { font-size:9px; color:#5f6368; text-align:center; }
+
+  .rfooter { border-top:1px solid #e0e0e0; padding-top:4mm; margin-top:4mm;
+             font-size:9px; color:#9e9e9e; line-height:1.4; text-align:center; }
+
+  .recibo-btns { display:flex; gap:10px; justify-content:center; margin-top:14px; }
+
+  /* ── Impresión A5 ─────────────────────────────────────── */
+  @media print {
+    @page { size:A5 portrait; margin:6mm; }
+    body  { background:#fff; padding:0; }
+    #vistaFormulario, #vistaRecibo .recibo-btns { display:none !important; }
+    #vistaRecibo { display:block !important; }
+    .recibo { border:none; padding:0; border-radius:0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     VISTA 1: FORMULARIO
+═══════════════════════════════════════════════════ -->
+<div id="vistaFormulario">
+
+  <h2>📋 Nueva Compra de Divisa</h2>
+  <div id="cargando" style="text-align:center;padding:30px;color:#1a73e8;">Cargando datos…</div>
+
+  <div id="mainForm" class="hidden">
+
+    <div class="section">
+      <div class="section-title">Empleado</div>
+      <div style="max-width:280px">
+        <label>Nombre *</label>
+        <input type="text" id="empleado" placeholder="Tu nombre">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Identificación del cliente</div>
+      <div class="grid2">
+        <div><label>Nombre completo *</label>
+          <input type="text" id="nombreCliente" placeholder="Nombre y apellidos"></div>
+        <div><label>Nacionalidad *</label>
+          <input type="text" id="nacionalidad" placeholder="p.ej. Británica"></div>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div><label>Tipo de documento *</label><select id="tipoDoc"></select></div>
+        <div><label>Número de documento *</label>
+          <input type="text" id="numDoc" placeholder="Nº documento"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Seleccionar divisa</div>
+      <div class="divisa-grid" id="divisaGrid"></div>
+      <input type="hidden" id="divisaSeleccionada">
+    </div>
+
+    <div class="section">
+      <div class="section-title">Importe</div>
+      <div class="grid2">
+        <div><label>Importe en divisa *</label>
+          <input type="number" id="importeDivisa" placeholder="0.00" min="0" step="0.01"></div>
+        <div><label>Divisa seleccionada</label>
+          <input type="text" id="divisaNombre" readonly placeholder="— selecciona arriba —"></div>
+      </div>
+      <div id="calcBox" class="calc-box hidden">
+        <div class="calc-row"><span>Tipo oficial BCE</span><span id="cTipoBCE">—</span></div>
+        <div class="calc-row markup sep"><span>Markup aplicado</span><span id="cMarkup">—</span></div>
+        <div class="calc-row"><span>Tasa de compra</span><span id="cTasaAplicada">—</span></div>
+        <div class="calc-row total"><span>€ a pagar al cliente</span><span id="cImporteEur">—</span></div>
+      </div>
+      <div id="amlPreview"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Observaciones</div>
+      <input type="text" id="observaciones" placeholder="Opcional">
+    </div>
+
+    <div id="mensajeFinal"></div>
+    <div class="spinner" id="spinner">⏳ Procesando…</div>
+
+    <div class="btn-row">
+      <button class="btn-sec" onclick="google.script.host.close()">Cancelar</button>
+      <button class="btn-primary" id="btnConfirmar" onclick="confirmar()">Confirmar compra</button>
+    </div>
+
+  </div><!-- /mainForm -->
+</div><!-- /vistaFormulario -->
+
+
+<!-- ═══════════════════════════════════════════════════
+     VISTA 2: RECIBO (mismo modal, reemplaza al form)
+═══════════════════════════════════════════════════ -->
+<div id="vistaRecibo">
+
+  <div class="recibo" id="reciboContenido">
+
+    <div class="hotel-header">
+      <div class="hotel-nombre" id="rHotelNombre">HOTEL</div>
+      <div class="hotel-datos"  id="rHotelDatos"></div>
+    </div>
+
+    <div class="recibo-titulo">COMPROBANTE DE CAMBIO DE DIVISAS</div>
+
+    <div class="bloque">
+      <div class="bloque-titulo">Operación</div>
+      <div class="rfila"><span class="rl">N° operación</span><span class="rv" id="rOpNum">—</span></div>
+      <div class="rfila"><span class="rl">Fecha y hora</span><span class="rv" id="rFechaHora">—</span></div>
+      <div class="rfila"><span class="rl">Empleado</span><span class="rv" id="rEmpleado">—</span></div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo">Cliente</div>
+      <div class="rfila"><span class="rl">Nombre</span><span class="rv" id="rCliente">—</span></div>
+      <div class="rfila"><span class="rl">Documento</span><span class="rv" id="rDoc">—</span></div>
+      <div class="rfila"><span class="rl">Nacionalidad</span><span class="rv" id="rNacionalidad">—</span></div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo">Detalle del cambio</div>
+      <table class="rtabla">
+        <tr><td class="rl">Divisa</td><td class="rv" id="rDivisa">—</td></tr>
+        <tr><td class="rl">Importe entregado</td><td class="rv" id="rImporteDivisa">—</td></tr>
+        <tr class="rsep">
+          <td class="rl">Tipo oficial BCE</td><td class="rv" id="rTipoBCE">—</td></tr>
+        <tr class="rmkp">
+          <td class="rl">Markup aplicado</td><td class="rv" id="rMarkup">—</td></tr>
+        <tr><td class="rl">Tasa de compra</td><td class="rv" id="rTasaAplicada">—</td></tr>
+        <tr class="rtot">
+          <td class="rl">EUROS RECIBIDOS</td><td class="rv" id="rImporteEur">—</td></tr>
+      </table>
+    </div>
+
+    <div class="raml hidden" id="rAml">
+      <strong id="rAmlTitulo"></strong>
+      <span   id="rAmlTexto"></span>
+    </div>
+
+    <div class="firma-area">
+      <div class="firma-box">
+        <div class="firma-line"></div>
+        <div class="firma-lbl">Firma del cliente</div>
+      </div>
+      <div class="firma-box">
+        <div class="firma-line"></div>
+        <div class="firma-lbl">Sello / Empleado</div>
+      </div>
+    </div>
+
+    <div class="rfooter" id="rFooter">
+      Operación registrada conforme a la Ley 10/2010 de prevención del blanqueo de capitales
+      y financiación del terrorismo, y al RD 304/2014.
+      Los datos personales se conservarán 10 años (Art. 25 Ley 10/2010).
+      <br><strong>Conserve este justificante.</strong>
+    </div>
+
+  </div><!-- /recibo -->
+
+  <div class="recibo-btns">
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimir (A5)</button>
+    <button class="btn-sec"   onclick="nuevaOperacion()">+ Nueva operación</button>
+    <button class="btn-sec"   onclick="google.script.host.close()">Cerrar</button>
+  </div>
+
+</div><!-- /vistaRecibo -->
+
+
+<script>
+  let datosGlobales = {};
+
+  // ── Inicialización ─────────────────────────────────────
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        datosGlobales = data;
+        inicializar(data);
+        document.getElementById('cargando').style.display = 'none';
+        document.getElementById('mainForm').classList.remove('hidden');
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('cargando').innerHTML = '❌ Error: ' + e.message;
+      })
+      .getDialogData();
+  };
+
+  function inicializar(data) {
+    const sel = document.getElementById('tipoDoc');
+    data.tiposDoc.forEach(t => {
+      const o = document.createElement('option'); o.value = t; o.textContent = t; sel.appendChild(o);
+    });
+    const grid = document.getElementById('divisaGrid');
+    data.divisas.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'divisa-card' + (d.activa ? '' : ' blocked');
+      card.dataset.codigo = d.codigo;
+      card.innerHTML = `<div class="cod">${d.simbolo} ${d.codigo}</div>
+                        <div class="nom">${d.nombre}</div>
+                        <div class="est">${d.activa ? '✅ Activa' : '🚫 No aceptada'}</div>`;
+      if (d.activa) card.onclick = () => seleccionarDivisa(d.codigo, card);
+      grid.appendChild(card);
+    });
+  }
+
+  // ── Selección de divisa ────────────────────────────────
+  function seleccionarDivisa(codigo, el) {
+    document.querySelectorAll('.divisa-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('divisaSeleccionada').value = codigo;
+    const t = datosGlobales.tasas.find(x => x.codigo === codigo);
+    document.getElementById('divisaNombre').value = t ? t.nombre : codigo;
+    calcular();
+  }
+
+  document.addEventListener('input', e => { if (e.target.id === 'importeDivisa') calcular(); });
+
+  // ── Cálculo en tiempo real ─────────────────────────────
+  function calcular() {
+    const codigo  = document.getElementById('divisaSeleccionada').value;
+    const importe = parseFloat(document.getElementById('importeDivisa').value) || 0;
+    if (!codigo || importe <= 0) {
+      document.getElementById('calcBox').classList.add('hidden');
+      document.getElementById('amlPreview').innerHTML = '';
+      return;
+    }
+    const t = datosGlobales.tasas.find(x => x.codigo === codigo);
+    if (!t) return;
+    const importeEur = importe * t.tasaCompra;
+    document.getElementById('cTipoBCE').textContent     = t.tipoBCE.toFixed(4) + ' €';
+    document.getElementById('cMarkup').textContent      = '−' + t.markupPct.toFixed(2) + '%  (' + fmt((t.tipoBCE - t.tasaCompra) * importe) + ' € retenidos)';
+    document.getElementById('cTasaAplicada').textContent= t.tasaCompra.toFixed(4) + ' €';
+    document.getElementById('cImporteEur').textContent  = fmt(importeEur) + ' €';
+    document.getElementById('calcBox').classList.remove('hidden');
+    mostrarPreviewAML(importeEur);
+  }
+
+  function mostrarPreviewAML(importeEur) {
+    const el = document.getElementById('amlPreview');
+    let nivel = 'NORMAL', textos = [];
+    if (importeEur >= 10000) { nivel = 'DECLARACION_S1'; textos.push('🚨 ≥ 10.000€ → Declaración S-1 al Banco de España OBLIGATORIA'); }
+    if (importeEur >= 3000)  { if (nivel === 'NORMAL') nivel = 'DD_REFORZADA'; textos.push('⚠️ ≥ 3.000€ → Diligencia debida reforzada (Art. 11 Ley 10/2010)'); }
+    if (importeEur >= 1000)  { if (nivel === 'NORMAL') nivel = 'ID_REQUERIDO'; textos.push('ℹ️ ≥ 1.000€ → Identificación obligatoria (Art. 3.2 RD 304/2014)'); }
+    const labels = { NORMAL:'✅ Sin alertas AML', ID_REQUERIDO:'AML: Identificación requerida',
+      DD_REFORZADA:'AML: DD reforzada', DECLARACION_S1:'AML: Declaración S-1 requerida' };
+    let html = `<span class="aml-badge aml-${nivel}">${labels[nivel]}</span>`;
+    if (textos.length > 0) {
+      html += `<div class="aml-warning ${nivel==='DECLARACION_S1'?'aml-critical':''}">
+                 <strong>Requisitos para esta operación:</strong><ul>`;
+      textos.forEach(t => html += `<li>${t}</li>`);
+      html += '</ul></div>';
+    }
+    el.innerHTML = html;
+  }
+
+  // ── Confirmar operación ────────────────────────────────
+  function confirmar() {
+    const datos = {
+      empleado:      document.getElementById('empleado').value.trim(),
+      nombreCliente: document.getElementById('nombreCliente').value.trim(),
+      tipoDoc:       document.getElementById('tipoDoc').value,
+      numDoc:        document.getElementById('numDoc').value.trim(),
+      nacionalidad:  document.getElementById('nacionalidad').value.trim(),
+      divisa:        document.getElementById('divisaSeleccionada').value,
+      importeDivisa: parseFloat(document.getElementById('importeDivisa').value),
+      observaciones: document.getElementById('observaciones').value.trim()
+    };
+
+    const falt = [];
+    if (!datos.empleado)      falt.push('Empleado');
+    if (!datos.nombreCliente) falt.push('Nombre del cliente');
+    if (!datos.numDoc)        falt.push('Número de documento');
+    if (!datos.nacionalidad)  falt.push('Nacionalidad');
+    if (!datos.divisa)        falt.push('Divisa');
+    if (!datos.importeDivisa || datos.importeDivisa <= 0) falt.push('Importe válido');
+    if (falt.length > 0) { mostrarError('⚠️ Faltan campos: ' + falt.join(', ')); return; }
+
+    document.getElementById('btnConfirmar').disabled = true;
+    document.getElementById('spinner').style.display = 'block';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('spinner').style.display = 'none';
+        if (res.error) {
+          mostrarError('❌ ' + res.error);
+          document.getElementById('btnConfirmar').disabled = false;
+          return;
+        }
+        // ✅ Operación OK → obtener datos del recibo y mostrarlo
+        google.script.run
+          .withSuccessHandler(function(recibo) {
+            if (recibo.error) {
+              // Si falla el recibo, al menos mostramos confirmación
+              mostrarError('⚠️ Operación registrada (N°' + res.opNum + ') pero no se pudo cargar el recibo: ' + recibo.error);
+              document.getElementById('btnConfirmar').disabled = false;
+              return;
+            }
+            rellenarRecibo(recibo);
+            mostrarVistaRecibo();
+          })
+          .withFailureHandler(function(e) {
+            mostrarError('Operación registrada pero error al cargar recibo: ' + e.message);
+            document.getElementById('btnConfirmar').disabled = false;
+          })
+          .getDatosReciboDirecto(res.opNum);
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('spinner').style.display = 'none';
+        mostrarError('❌ Error: ' + e.message);
+        document.getElementById('btnConfirmar').disabled = false;
+      })
+      .procesarOperacion(datos);
+  }
+
+  // ── Rellenar y mostrar recibo ──────────────────────────
+  function rellenarRecibo(d) {
+    // Hotel
+    document.getElementById('rHotelNombre').textContent = d.hotelNombre || 'HOTEL';
+    document.getElementById('rHotelDatos').textContent  =
+      [d.hotelDireccion, d.hotelTel, d.hotelEmail].filter(Boolean).join('  ·  ');
+
+    // Operación
+    set('rOpNum',     d.opNum);
+    set('rFechaHora', d.fecha + '  ' + d.hora);
+    set('rEmpleado',  d.empleado);
+
+    // Cliente
+    set('rCliente',     d.nombreCliente);
+    set('rDoc',         d.tipoDoc + '  ' + d.numDoc);
+    set('rNacionalidad',d.nacionalidad);
+
+    // Cambio
+    set('rDivisa',       d.divisaNombre + ' (' + d.divisa + ')');
+    set('rImporteDivisa',fmt(d.importeDivisa) + ' ' + d.simbolo);
+    set('rTipoBCE',      d.tipoBCE.toFixed(4) + ' €');
+    set('rMarkup',       '−' + d.markupPct.toFixed(2) + '%');
+    set('rTasaAplicada', d.tasaAplicada.toFixed(4) + ' €');
+    set('rImporteEur',   fmt(d.importeEur) + ' €');
+
+    // AML notice
+    const amlMsgs = {
+      ID_REQUERIDO:   ['ℹ️ Identificación verificada', 'Copia del documento de identidad archivada (Art. 3.2 RD 304/2014).'],
+      DD_REFORZADA:   ['⚠️ Diligencia debida reforzada', 'Declaración de origen de fondos completada (Art. 11 Ley 10/2010).'],
+      DECLARACION_S1: ['🚨 Declaración al Banco de España', 'Operación sujeta a Modelo S-1. Documentación presentada.'],
+      SOSPECHOSO:     ['🚨 Operación bajo revisión', 'Retenida para revisión por el Responsable de Cumplimiento.']
+    };
+    const amlEl = document.getElementById('rAml');
+    if (d.amlNivel && amlMsgs[d.amlNivel]) {
+      const m = amlMsgs[d.amlNivel];
+      set('rAmlTitulo', m[0]);
+      set('rAmlTexto',  m[1]);
+      amlEl.classList.remove('hidden');
+    } else {
+      amlEl.classList.add('hidden');
+    }
+
+    // Pie personalizado del hotel
+    if (d.hotelPie) {
+      document.getElementById('rFooter').innerHTML +=
+        '<br><br><em>' + d.hotelPie + '</em>';
+    }
+  }
+
+  function mostrarVistaRecibo() {
+    document.getElementById('vistaFormulario').style.display = 'none';
+    document.getElementById('vistaRecibo').style.display     = 'block';
+  }
+
+  function nuevaOperacion() {
+    // Resetear formulario y volver a la vista del form
+    ['nombreCliente','numDoc','nacionalidad','importeDivisa','observaciones'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('divisaNombre').value    = '';
+    document.getElementById('divisaSeleccionada').value = '';
+    document.querySelectorAll('.divisa-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('calcBox').classList.add('hidden');
+    document.getElementById('amlPreview').innerHTML  = '';
+    document.getElementById('mensajeFinal').innerHTML = '';
+    document.getElementById('btnConfirmar').disabled = false;
+    document.getElementById('vistaRecibo').style.display     = 'none';
+    document.getElementById('vistaFormulario').style.display = 'block';
+  }
+
+  // ── Helpers ───────────────────────────────────────────
+  function mostrarError(html) {
+    const el = document.getElementById('mensajeFinal');
+    el.className = 'msg msg-err'; el.innerHTML = html;
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function set(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val != null ? val : '—';
+  }
+
+  function fmt(n) {
+    return parseFloat(n).toLocaleString('es-ES', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+</script>
+</body>
+</html>

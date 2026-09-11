@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; font-family:'Google Sans',Arial,sans-serif; }
+  body { background:#f8f9fa; padding:16px; font-size:13px; color:#202124; }
+
+  h2 { font-size:15px; font-weight:600; margin-bottom:6px; color:#1a73e8; border-bottom:2px solid #1a73e8; padding-bottom:6px; }
+  .subtitle { font-size:12px; color:#5f6368; margin-bottom:14px; line-height:1.5; }
+
+  .section { background:#fff; border:1px solid #dadce0; border-radius:8px; padding:14px; margin-bottom:12px; }
+  .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#5f6368; margin-bottom:10px; }
+
+  label { display:block; font-size:11px; color:#5f6368; margin-bottom:3px; font-weight:500; }
+  input { width:100%; padding:7px 10px; border:1px solid #dadce0; border-radius:4px; font-size:13px; outline:none; }
+  input:focus { border-color:#1a73e8; box-shadow:0 0 0 2px rgba(26,115,232,.2); }
+  input[readonly] { background:#f5f5f5; color:#5f6368; }
+
+  table { width:100%; border-collapse:collapse; }
+  th { background:#1a73e8; color:#fff; padding:8px 10px; font-size:11px; font-weight:700; text-align:left; }
+  td { padding:8px 10px; border-bottom:1px solid #f1f3f4; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr.blocked td { opacity:.45; background:#fafafa; }
+  td.computed { background:#e8f0fe; font-weight:600; color:#1a73e8; }
+
+  .badge-ok { background:#e8f5e9; color:#2e7d32; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+  .badge-no { background:#ffebee; color:#c62828; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+
+  .nota { background:#fff8e1; border-left:4px solid #ffc107; padding:8px 12px; font-size:12px; border-radius:0 4px 4px 0; margin-bottom:12px; line-height:1.5; }
+  .nota strong { color:#e65100; }
+
+  .btn-row { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
+  button { padding:8px 18px; border:none; border-radius:4px; font-size:13px; font-weight:600; cursor:pointer; }
+  .btn-primary { background:#1a73e8; color:#fff; }
+  .btn-primary:hover { background:#1557b0; }
+  .btn-primary:disabled { background:#9e9e9e; cursor:not-allowed; }
+  .btn-sec { background:#fff; color:#1a73e8; border:1px solid #1a73e8; }
+
+  .msg { padding:10px; border-radius:6px; margin-top:10px; font-size:12px; }
+  .msg-ok  { background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; }
+  .msg-err { background:#ffebee; color:#b71c1c; border:1px solid #ef9a9a; }
+  .spinner { display:none; text-align:center; padding:10px; color:#1a73e8; }
+</style>
+</head>
+<body>
+
+<h2>📐 Ajustar Markup de Divisas</h2>
+<p class="subtitle">
+  El <strong>Tipo BCE</strong> se actualiza solo vía GOOGLEFINANCE — no editable aquí.<br>
+  Solo tienes que ajustar el <strong>Markup %</strong> de cada divisa activa.
+  La <strong>Tasa aplicada</strong> (azul) se recalcula en tiempo real.
+</p>
+
+<div class="nota">
+  💡 <strong>Cómo funciona el markup:</strong> Tasa aplicada = Tipo BCE × (1 − Markup/100)<br>
+  Ejemplo: BCE 1.1700 con markup 15% → tasa compra <strong>0.9945 €</strong> por libra.
+</div>
+
+<div class="section">
+  <div class="section-title">Quién hace el ajuste</div>
+  <div style="max-width:260px">
+    <label>Nombre *</label>
+    <input type="text" id="empleadoMarkup" placeholder="Tu nombre">
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Markup por divisa</div>
+  <div id="loadingMsg" style="text-align:center;padding:20px;color:#1a73e8;">Cargando…</div>
+  <table id="tabla" style="display:none">
+    <thead>
+      <tr>
+        <th>Divisa</th>
+        <th>Estado</th>
+        <th>Tipo BCE (€) ↻</th>
+        <th>Markup (%)</th>
+        <th style="background:#1557b0">Tasa aplicada (€) ✦</th>
+      </tr>
+    </thead>
+    <tbody id="tablaBody"></tbody>
+  </table>
+</div>
+
+<div id="mensajeFinal"></div>
+<div class="spinner" id="spinner">⏳ Guardando…</div>
+
+<div class="btn-row">
+  <button class="btn-sec" onclick="google.script.host.close()">Cancelar</button>
+  <button class="btn-primary" id="btnGuardar" onclick="guardar()">Guardar markup</button>
+</div>
+
+<script>
+  let tasasGlobales = [];
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        tasasGlobales = data.tasas;
+        renderTabla(data.tasas);
+        document.getElementById('loadingMsg').style.display='none';
+        document.getElementById('tabla').style.display='';
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('loadingMsg').innerHTML='❌ Error: '+e.message;
+      })
+      .getDialogData();
+  };
+
+  function renderTabla(tasas) {
+    const tbody = document.getElementById('tablaBody');
+    tbody.innerHTML = '';
+    tasas.forEach(t => {
+      const tr = document.createElement('tr');
+      if (!t.activa) tr.classList.add('blocked');
+
+      const tasaCalc = t.activa
+        ? (t.tipoBCE * (1 - (t.markupPct||0)/100)).toFixed(4)
+        : '—';
+
+      tr.innerHTML = `
+        <td><strong>${t.codigo}</strong><br><span style="font-size:10px;color:#5f6368">${t.nombre}</span></td>
+        <td>${t.activa?'<span class="badge-ok">✅ Activa</span>':'<span class="badge-no">🚫 Bloqueada</span>'}</td>
+        <td style="color:#5f6368">${t.tipoBCE>0?t.tipoBCE.toFixed(4):'—'}</td>
+        <td>
+          <input type="number" step="0.01" min="0" max="50"
+            id="mkp_${t.codigo}"
+            value="${t.markupPct||0}"
+            ${t.activa?'':'readonly'}
+            oninput="recalcular('${t.codigo}', this.value, ${t.tipoBCE})"
+            style="width:80px;text-align:right">
+          <span style="color:#5f6368;margin-left:4px">%</span>
+        </td>
+        <td class="computed" id="calc_${t.codigo}">${tasaCalc}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function recalcular(codigo, markupStr, tipoBCE) {
+    const markup = parseFloat(markupStr) || 0;
+    const nueva  = tipoBCE > 0 ? (tipoBCE * (1 - markup/100)).toFixed(4) : '—';
+    document.getElementById('calc_'+codigo).textContent = nueva;
+  }
+
+  function guardar() {
+    const empleado = document.getElementById('empleadoMarkup').value.trim();
+    if (!empleado) { mostrarMsg('⚠️ Indica tu nombre.', false); return; }
+
+    const nuevos = [];
+    for (const t of tasasGlobales) {
+      if (!t.activa) continue;
+      const el  = document.getElementById('mkp_'+t.codigo);
+      const val = parseFloat(el.value);
+      if (isNaN(val)||val<0||val>50) { mostrarMsg(`⚠️ Markup inválido para ${t.codigo}. Debe estar entre 0 y 50%.`, false); return; }
+      nuevos.push({ codigo: t.codigo, markupPct: val });
+    }
+
+    document.getElementById('btnGuardar').disabled = true;
+    document.getElementById('spinner').style.display = 'block';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('spinner').style.display='none';
+        if (res.error) { mostrarMsg('❌ '+res.error, false); document.getElementById('btnGuardar').disabled=false; return; }
+        mostrarMsg(`✅ Markup actualizado para ${nuevos.length} divisa(s). Las tasas ya están activas para nuevas operaciones.`, true);
+        document.getElementById('btnGuardar').disabled=false;
+      })
+      .withFailureHandler(function(e) {
+        document.getElementById('spinner').style.display='none';
+        mostrarMsg('❌ Error: '+e.message, false);
+        document.getElementById('btnGuardar').disabled=false;
+      })
+      .guardarMarkup(nuevos, empleado);
+  }
+
+  function mostrarMsg(html, ok) {
+    const el = document.getElementById('mensajeFinal');
+    el.className='msg '+(ok?'msg-ok':'msg-err');
+    el.innerHTML=html;
+  }
+</script>
+</body>
+</html>
